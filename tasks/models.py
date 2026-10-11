@@ -1,4 +1,6 @@
 from django.db import models
+
+
 class Task(models.Model):
     class Status(models.TextChoices):
         TODO = "todo", "To do"

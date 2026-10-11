@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from tasks.models import Task
@@ -36,13 +37,20 @@ class TaskModelTests(TestCase):
         self.assertEqual(str(task), "Summary title")
 
     def test_ordering_descending(self):
-        # time.sleep ensures different created_at values so ordering is deterministic
-        import time
+        # Meta.ordering = ["-created_at"] → newest first.
+        # Set created_at explicitly to avoid flaky time.sleep and keep the test fast.
+        now = timezone.now()
+        earlier = now.replace(minute=now.minute - 1)
 
-        _ = Task.objects.create(title="First")
-        time.sleep(0.01)
-        second = Task.objects.create(title="Second")
-        # Meta.ordering = ["-created_at"] → newest first
+        first = Task(title="First")
+        first.save()
+        first.created_at = earlier
+        first.save(update_fields=["created_at"])
+
+        second = Task(title="Second")
+        second.save()
+
+        # Re-fetch to see ordering applied by the ORM
         tasks = list(Task.objects.all())
         self.assertEqual(tasks[-1].title, "First")   # oldest at the end
         self.assertEqual(tasks[0].pk, second.pk)     # newest at the front

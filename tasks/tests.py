@@ -36,20 +36,25 @@ class TaskModelTests(TestCase):
         self.assertEqual(str(task), "Summary title")
 
     def test_ordering_descending(self):
-        # Use time.sleep to get different created_at values for ordering
-        t1 = Task.objects.create(title="First")
-        t2 = Task.objects.create(title="Second")
-        # Ordering is by -created_at (desc); with same created_at it falls
-        # back to PK desc, so the last-created (highest PK) comes first
+        # time.sleep ensures different created_at values so ordering is deterministic
+        import time
+
+        _ = Task.objects.create(title="First")
+        time.sleep(0.01)
+        second = Task.objects.create(title="Second")
+        # Meta.ordering = ["-created_at"] → newest first
         tasks = list(Task.objects.all())
         self.assertEqual(tasks[-1].title, "First")   # oldest at the end
-        self.assertEqual(tasks[0].pk, t2.pk)          # newest at the front
+        self.assertEqual(tasks[0].pk, second.pk)     # newest at the front
 
     def test_create_task_without_title_fails(self):
-        from django.db import IntegrityError
+        from django.core.exceptions import ValidationError
 
-        with self.assertRaises(IntegrityError):
-            Task.objects.create()
+        # CharField(max_length=200) without blank=False defaults to blank=False,
+        # so full_clean() should reject empty strings
+        task = Task(title="")
+        with self.assertRaises(ValidationError):
+            task.full_clean()
 
     def test_all_valid_statuses_accepted(self):
         for status in Task.Status.values:
@@ -71,8 +76,8 @@ class TaskApiTests(TestCase):
         self.assertEqual(response.data, [])
 
     def test_list_tasks_returns_items(self):
-        t1 = Task.objects.create(title="Alpha")
-        t2 = Task.objects.create(title="Beta")
+        _ = Task.objects.create(title="Alpha")
+        _ = Task.objects.create(title="Beta")
         response = self.client.get("/api/tasks/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 2)

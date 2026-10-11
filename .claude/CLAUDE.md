@@ -5,4 +5,4 @@
 - Never claim a check passed unless it was actually run.
 - Review git diff and git status before finishing.
 - Do not expose secrets or add .env files to Git.
-- Do not run destructive Git commands, deploy, or commit without explicit approval.
+- Do not run destructive Git commands (force-push, reset --hard, delete branch), deploy, commit, or push without explicit approval.
